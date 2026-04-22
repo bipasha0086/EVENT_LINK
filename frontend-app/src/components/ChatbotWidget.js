@@ -17,6 +17,20 @@ const stopWords = new Set([
 
 const containsCinemaIntent = (text) => /(pvr|inox|cinepolis|cinema|theatre|theater|mall|area)/i.test(text || '');
 
+const eventBookingKeywords = [
+  'event', 'events', 'book', 'booking', 'seat', 'seats', 'pay', 'payment', 'ticket', 'tickets',
+  'theatre', 'theater', 'cinema', 'movie', 'schedule', 'timing', 'show', 'alert', 'notification',
+  'dashboard', 'register', 'login', 'admin', 'user', 'deallocate', 'allocate', 'threat area'
+];
+
+const isEventBookingQuestion = (text) => {
+  const message = String(text || '').toLowerCase();
+  return eventBookingKeywords.some((keyword) => message.includes(keyword));
+};
+
+const offTopicReply =
+  'I can only help with this Event Booking system: login/register, role dashboards, theatre schedules, seat booking, payments, allocation/deallocation, and notifications. Please ask related to these topics only.';
+
 const tokenizeSearchTerms = (text) => {
   return String(text || '')
     .toLowerCase()
@@ -104,6 +118,16 @@ export default function ChatbotWidget({ currentUser, theatres = [], events = [],
   const sendMessage = async (text) => {
     const cleanText = (text || input).trim();
     if (!cleanText || loading) {
+      return;
+    }
+
+    if (!isEventBookingQuestion(cleanText)) {
+      setMessages((prev) => [
+        ...prev,
+        { role: 'user', content: cleanText },
+        { role: 'assistant', content: offTopicReply },
+      ]);
+      setInput('');
       return;
     }
 

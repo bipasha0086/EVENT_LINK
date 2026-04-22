@@ -17,6 +17,21 @@ import java.util.List;
 public class UserServlet extends HttpServlet {
     private UserService userService = new UserService();
 
+    private String normalizeRole(String role) {
+        String value = role == null ? "" : role.trim().toUpperCase().replaceAll("\\s+", "_");
+        if ("ADMIN".equals(value)) return "ADMIN";
+        if ("USER".equals(value)) return "USER";
+        if ("THEATRE".equals(value)
+            || "THEATER".equals(value)
+            || "THEATRE_PERSON".equals(value)
+            || "THEATER_PERSON".equals(value)
+            || "THREATRE".equals(value)
+            || "THREAD_PERSON".equals(value)) {
+            return "THEATRE";
+        }
+        return value;
+    }
+
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String action = req.getParameter("action");
@@ -45,8 +60,20 @@ public class UserServlet extends HttpServlet {
             } else if ("login".equals(action)) {
                 String username = req.getParameter("username");
                 String password = req.getParameter("password");
+                String expectedRole = req.getParameter("expectedRole");
                 User user = userService.loginUser(username, password);
                 if (user != null) {
+                    String normalizedExpectedRole = normalizeRole(expectedRole);
+                    String normalizedActualRole = normalizeRole(user.getRole());
+
+                    if (!normalizedExpectedRole.isEmpty() && !normalizedExpectedRole.equals(normalizedActualRole)) {
+                        resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                        out.print("{\"status\":\"fail\",\"message\":\"Role mismatch. Please login as "
+                            + JsonUtil.escape(normalizedActualRole)
+                            + "\"}");
+                        return;
+                    }
+
                     String theatreId = user.getTheatreId() == null ? "null" : String.valueOf(user.getTheatreId());
                     out.print("{\"status\":\"success\",\"user\":{" +
                         "\"userId\":" + user.getUserId() + "," +

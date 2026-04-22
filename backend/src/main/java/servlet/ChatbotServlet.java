@@ -22,12 +22,20 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 
 @WebServlet("/chatbot")
 public class ChatbotServlet extends HttpServlet {
     private static final Gson GSON = new Gson();
     private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
+    private static final Set<String> EVENT_BOOKING_KEYWORDS = new HashSet<>(Arrays.asList(
+        "event", "events", "book", "booking", "seat", "seats", "pay", "payment", "ticket", "tickets",
+        "theatre", "theater", "cinema", "movie", "schedule", "timing", "show", "alert", "notification",
+        "dashboard", "register", "login", "admin", "user", "allocate", "deallocate", "threat area"
+    ));
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -61,6 +69,11 @@ public class ChatbotServlet extends HttpServlet {
             if (message.isEmpty()) {
                 resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
                 out.print("{\"status\":\"error\",\"message\":\"message is required\"}");
+                return;
+            }
+
+            if (!isEventBookingQuestion(message)) {
+                out.print("{\"status\":\"success\",\"reply\":\"I can only answer questions related to this Event Booking system. Ask about login/register, role dashboards, theatre schedules, seat booking, payments, allocation/deallocation, or notifications.\",\"model\":\"local-filter\"}");
                 return;
             }
 
@@ -113,9 +126,10 @@ public class ChatbotServlet extends HttpServlet {
         JsonObject system = new JsonObject();
         system.addProperty("role", "system");
         system.addProperty("content",
-            "You are the EventBooking assistant. Help users book seats, pay on time, manage theatres, understand bookings, and answer only with short practical guidance. " +
-            "If the user asks about app features, explain the exact steps in this booking system. " +
-            "Keep answers concise, friendly, and relevant to theatre bookings. Context: " + context + " Role: " + role
+            "You are the EventBooking assistant for this specific application only. " +
+            "Answer only questions related to this app's features and workflows: login/register, role dashboards, theatre schedules, seat booking, payments, allocation/deallocation, and notifications. " +
+            "If a question is outside this scope, refuse briefly and ask the user to ask an Event Booking system question. " +
+            "Keep answers concise, practical, and app-specific. Context: " + context + " Role: " + role
         );
         messages.add(system);
 
@@ -210,5 +224,15 @@ public class ChatbotServlet extends HttpServlet {
             }
         }
         return null;
+    }
+
+    private static boolean isEventBookingQuestion(String message) {
+        String lower = message == null ? "" : message.toLowerCase(Locale.ROOT);
+        for (String keyword : EVENT_BOOKING_KEYWORDS) {
+            if (lower.contains(keyword)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

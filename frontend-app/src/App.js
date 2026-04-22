@@ -37,6 +37,14 @@ const normalizeRole = (role) => {
   return value;
 };
 
+const getDashboardPathForRole = (role) => {
+  const normalizedRole = normalizeRole(role);
+  if (normalizedRole === 'ADMIN') return '/admin-dashboard';
+  if (normalizedRole === 'THEATRE') return '/theatre-dashboard';
+  if (normalizedRole === 'USER') return '/user-dashboard';
+  return '/';
+};
+
 const normalizeUserRole = (user) => {
   if (!user) return user;
   return {
@@ -367,6 +375,9 @@ function App() {
     formData.append('action', 'login');
     formData.append('username', username);
     formData.append('password', password);
+    if (expectedRole) {
+      formData.append('expectedRole', expectedRole);
+    }
 
     const response = await fetch(toApiUrl('/user'), {
       method: 'POST',
@@ -386,10 +397,7 @@ function App() {
     const normalizedActualRole = normalizeRole(normalizedUser?.role);
 
     if (normalizedExpectedRole && normalizedExpectedRole !== normalizedActualRole) {
-      appendUiAlert(
-        'warning',
-        `Role mismatch detected. Continuing as ${normalizedActualRole || 'the account\'s actual role'}.`
-      );
+      throw new Error(`This account is ${normalizedActualRole}. Please login using the ${normalizedActualRole} role.`);
     }
 
     setCurrentUser(normalizedUser);
@@ -639,7 +647,7 @@ function App() {
       return <Navigate to="/login" replace />;
     }
     if (!allowedRoles.includes(currentUser.role)) {
-      return <Navigate to="/" replace />;
+      return <Navigate to={getDashboardPathForRole(currentUser.role)} replace />;
     }
     return children;
   };

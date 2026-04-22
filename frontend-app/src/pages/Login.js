@@ -4,6 +4,7 @@ import {
   Alert,
   Box,
   Button,
+  CircularProgress,
   FormControl,
   InputLabel,
   MenuItem,
@@ -68,6 +69,10 @@ export default function Login({ currentUser, onLogin, theatres, threatAreas }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loading) {
+      return;
+    }
+
     setError('');
     if (!username.trim() || !password.trim()) {
       setError('Please enter username and password.');
@@ -198,8 +203,21 @@ export default function Login({ currentUser, onLogin, theatres, threatAreas }) {
               </FormControl>
             )}
 
-            <Button type="submit" variant="contained" size="large" disabled={loading} sx={{ py: 1.25, fontWeight: 800 }}>
-              {loading ? 'Logging in...' : `Continue as ${roles.find((r) => r.value === selectedRole)?.label}`}
+            <Button
+              type="submit"
+              variant="contained"
+              size="large"
+              disabled={loading}
+              sx={{ py: 1.25, fontWeight: 800 }}
+            >
+              {loading ? (
+                <>
+                  <CircularProgress size={18} color="inherit" sx={{ mr: 1 }} />
+                  Logging in...
+                </>
+              ) : (
+                `Continue as ${roles.find((r) => r.value === selectedRole)?.label}`
+              )}
             </Button>
 
             <Button variant="text" onClick={() => navigate('/register')} sx={{ fontWeight: 700 }}>

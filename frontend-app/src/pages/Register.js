@@ -5,11 +5,14 @@ import Typography from '@mui/material/Typography';
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import Alert from '@mui/material/Alert';
+import CircularProgress from '@mui/material/CircularProgress';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
+import Snackbar from '@mui/material/Snackbar';
+import { useNavigate } from 'react-router-dom';
 import './Auth.css';
 
 const roles = [
@@ -31,6 +34,7 @@ const roles = [
 ];
 
 export default function Register({ theatres = [], threatAreas = [] }) {
+  const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [threatArea, setThreatArea] = useState(threatAreas[0] || 'Downtown');
@@ -40,9 +44,27 @@ export default function Register({ theatres = [], threatAreas = [] }) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [openSuccessPopup, setOpenSuccessPopup] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  React.useEffect(() => {
+    if (!openSuccessPopup) {
+      return undefined;
+    }
+
+    const timer = window.setTimeout(() => {
+      navigate('/login');
+    }, 1600);
+
+    return () => window.clearTimeout(timer);
+  }, [openSuccessPopup, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmitting) {
+      return;
+    }
+
     setError('');
     setSuccess('');
     if (!username || !email || !password || !confirmPassword) {
@@ -57,6 +79,8 @@ export default function Register({ theatres = [], threatAreas = [] }) {
       setError('Please select a theatre for theatre accounts.');
       return;
     }
+
+    setIsSubmitting(true);
     try {
       const formData = new URLSearchParams();
       formData.append('action', 'register');
@@ -77,12 +101,19 @@ export default function Register({ theatres = [], threatAreas = [] }) {
       });
       const data = await response.json();
       if (data.status === 'success') {
-        setSuccess('Registration successful!');
+        setSuccess('Account created successfully. Redirecting to login...');
+        setOpenSuccessPopup(true);
+        setUsername('');
+        setEmail('');
+        setPassword('');
+        setConfirmPassword('');
       } else {
         setError(data.message || 'Registration failed.');
       }
     } catch (err) {
       setError('Registration failed. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -158,8 +189,8 @@ export default function Register({ theatres = [], threatAreas = [] }) {
                 </Alert>
               )}
               {success && (
-                <Alert severity="success" sx={{ mb: 2, borderRadius: 1, fontWeight: 500 }} onClose={() => window.location.href = '/login'}>
-                  Registration successful. Redirecting to login...
+                <Alert severity="success" sx={{ mb: 2, borderRadius: 1, fontWeight: 500 }}>
+                  {success}
                 </Alert>
               )}
 
@@ -195,13 +226,27 @@ export default function Register({ theatres = [], threatAreas = [] }) {
                   <TextField label="Password" type="password" variant="outlined" fullWidth value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 6 characters" />
                   <TextField label="Confirm Password" type="password" variant="outlined" fullWidth value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Re-enter your password" />
 
-                  <Button type="submit" variant="contained" fullWidth size="large" sx={{ py: 1.4, fontWeight: 800, borderRadius: 1 }}>
-                    Create Account
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    fullWidth
+                    size="large"
+                    disabled={isSubmitting}
+                    sx={{ py: 1.4, fontWeight: 800, borderRadius: 1 }}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <CircularProgress size={18} color="inherit" sx={{ mr: 1 }} />
+                        Creating Account...
+                      </>
+                    ) : (
+                      'Create Account'
+                    )}
                   </Button>
 
                   <Typography sx={{ textAlign: 'center', color: '#486581', fontSize: '0.95rem', fontWeight: 600 }}>
                     Already have an account?{' '}
-                    <span onClick={() => window.location.href = '/login'} style={{ color: '#0f8b8d', cursor: 'pointer', fontWeight: 800 }}>Login</span>
+                    <span onClick={() => navigate('/login')} style={{ color: '#0f8b8d', cursor: 'pointer', fontWeight: 800 }}>Login</span>
                   </Typography>
                 </Stack>
               </form>
@@ -211,6 +256,17 @@ export default function Register({ theatres = [], threatAreas = [] }) {
           </div>
         </section>
       </section>
+
+      <Snackbar
+        open={openSuccessPopup}
+        autoHideDuration={1500}
+        onClose={() => setOpenSuccessPopup(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert severity="success" variant="filled" sx={{ width: '100%', fontWeight: 700 }}>
+          Account created successfully. Redirecting to login...
+        </Alert>
+      </Snackbar>
     </main>
   );
 }
