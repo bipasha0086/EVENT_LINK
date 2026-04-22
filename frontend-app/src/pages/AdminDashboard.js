@@ -21,11 +21,13 @@ const roleOptions = [
   { value: 'ADMIN', label: 'Admin' },
   { value: 'USER', label: 'User' },
   { value: 'THEATRE', label: 'Theatre' },
+  { value: 'SUPER_ADMIN', label: 'Super Admin', disabled: true },
 ];
 
 const normalizeRole = (role) => {
   const value = String(role || '').trim().toUpperCase().replace(/\s+/g, '_');
   if (value === 'ADMIN') return 'ADMIN';
+  if (value === 'SUPER_ADMIN') return 'SUPER_ADMIN';
   if (value === 'USER') return 'USER';
   if (['THEATRE', 'THEATER', 'THEATRE_PERSON', 'THEATER_PERSON', 'THREATRE', 'THREAD_PERSON'].includes(value)) {
     return 'THEATRE';
@@ -145,12 +147,14 @@ function BookingCard({ booking, onAllocate, onDeallocate, isWatched, onToggleWat
   );
 }
 
-function UserRoleCard({ user, theatres, onUpdateUserRole }) {
+function UserRoleCard({ user, theatres, onUpdateUserRole, canManageRoles }) {
   const [role, setRole] = React.useState(normalizeRole(user.role));
   const [theatreId, setTheatreId] = React.useState(user.theatreId ?? '');
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState('');
 
+  const isProtectedSuperAdmin = normalizeRole(user.role) === 'SUPER_ADMIN';
+  const canEdit = canManageRoles && !isProtectedSuperAdmin;
   const needsTheatre = role === 'THEATRE';
 
   React.useEffect(() => {
@@ -168,13 +172,18 @@ function UserRoleCard({ user, theatres, onUpdateUserRole }) {
         <Typography variant="body2" sx={{ color: '#54655a', mb: 2 }}>
           {user.email || 'No email'}
         </Typography>
+        {isProtectedSuperAdmin && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Protected super admin account. Role changes are disabled.
+          </Alert>
+        )}
 
         <Stack spacing={2}>
           <FormControl fullWidth size="small">
             <InputLabel>Role</InputLabel>
-            <Select value={role} label="Role" onChange={(e) => setRole(e.target.value)}>
+            <Select value={role} label="Role" onChange={(e) => setRole(e.target.value)} disabled={!canEdit}>
               {roleOptions.map((option) => (
-                <MenuItem key={option.value} value={option.value}>
+                <MenuItem key={option.value} value={option.value} disabled={option.disabled}>
                   {option.label}
                 </MenuItem>
               ))}
@@ -184,7 +193,7 @@ function UserRoleCard({ user, theatres, onUpdateUserRole }) {
           {needsTheatre && (
             <FormControl fullWidth size="small">
               <InputLabel>Theatre</InputLabel>
-              <Select value={theatreId} label="Theatre" onChange={(e) => setTheatreId(e.target.value)}>
+              <Select value={theatreId} label="Theatre" onChange={(e) => setTheatreId(e.target.value)} disabled={!canEdit}>
                 {theatres.map((theatre) => (
                   <MenuItem key={theatre.theatreId} value={theatre.theatreId}>
                     {theatre.name} • {theatre.area}
@@ -197,7 +206,7 @@ function UserRoleCard({ user, theatres, onUpdateUserRole }) {
           <Button
             variant="contained"
             sx={{ borderRadius: RECT_CONTROL_RADIUS }}
-            disabled={saving || (needsTheatre && !theatreId)}
+            disabled={saving || !canEdit || (needsTheatre && !theatreId)}
             onClick={async () => {
               setSaving(true);
               setError('');
@@ -222,7 +231,9 @@ function UserRoleCard({ user, theatres, onUpdateUserRole }) {
   );
 }
 
-export default function AdminDashboard({ users = [], theatres = [], bookings, notifications, onAllocate, onDeallocate, onUpdateUserRole }) {
+export default function AdminDashboard({ currentUser, users = [], theatres = [], bookings, notifications, onAllocate, onDeallocate, onUpdateUserRole }) {
+  const currentRole = normalizeRole(currentUser?.role);
+  const canManageRoles = currentRole === 'SUPER_ADMIN';
   const pending = bookings.filter((b) => b.status === 'PENDING_PAYMENT').length;
   const paid = bookings.filter((b) => b.status === 'PAID').length;
   const expired = bookings.filter((b) => b.status === 'EXPIRED').length;
@@ -320,7 +331,9 @@ export default function AdminDashboard({ users = [], theatres = [], bookings, no
         <CardContent>
           <Typography variant="h6" sx={{ fontWeight: 800, mb: 1 }}>User Role Management</Typography>
           <Typography variant="body2" sx={{ color: '#54655a', mb: 2 }}>
-            Promote a user to Theatre by choosing a theatre, or demote back to User/Admin as needed.
+            {canManageRoles
+              ? 'Promote a user to Theatre by choosing a theatre, or demote back to User/Admin as needed.'
+              : 'Role changes are restricted to the super admin account.'}
           </Typography>
           {users.length === 0 ? (
             <Alert severity="info">No users available.</Alert>
@@ -328,7 +341,7 @@ export default function AdminDashboard({ users = [], theatres = [], bookings, no
             <Grid container spacing={2}>
               {users.map((user) => (
                 <Grid key={user.userId} item xs={12} md={6} lg={4}>
-                  <UserRoleCard user={user} theatres={theatres} onUpdateUserRole={onUpdateUserRole} />
+                  <UserRoleCard user={user} theatres={theatres} onUpdateUserRole={onUpdateUserRole} canManageRoles={canManageRoles} />
                 </Grid>
               ))}
             </Grid>

@@ -30,6 +30,7 @@ const toApiUrl = (path) => `${API_BASE_URL}${path}`;
 const normalizeRole = (role) => {
   const value = String(role || '').trim().toUpperCase().replace(/\s+/g, '_');
   if (value === 'ADMIN') return 'ADMIN';
+  if (value === 'SUPER_ADMIN') return 'SUPER_ADMIN';
   if (value === 'USER') return 'USER';
   if (['THEATRE', 'THEATER', 'THEATRE_PERSON', 'THEATER_PERSON', 'THREATRE', 'THREAD_PERSON'].includes(value)) {
     return 'THEATRE';
@@ -39,7 +40,7 @@ const normalizeRole = (role) => {
 
 const getDashboardPathForRole = (role) => {
   const normalizedRole = normalizeRole(role);
-  if (normalizedRole === 'ADMIN') return '/admin-dashboard';
+  if (normalizedRole === 'ADMIN' || normalizedRole === 'SUPER_ADMIN') return '/admin-dashboard';
   if (normalizedRole === 'THEATRE') return '/theatre-dashboard';
   if (normalizedRole === 'USER') return '/user-dashboard';
   return '/';
@@ -304,7 +305,7 @@ function App() {
 
       const bookingEndpoint = !activeUser
         ? '/booking'
-        : activeUser.role === 'ADMIN'
+        : activeUser.role === 'ADMIN' || activeUser.role === 'SUPER_ADMIN'
           ? '/booking'
           : activeUser.role === 'THEATRE' && activeUser.theatreId
             ? `/booking?theatreId=${activeUser.theatreId}`
@@ -494,6 +495,8 @@ function App() {
     try {
       const formData = new URLSearchParams();
       formData.append('action', 'update');
+      formData.append('actorUserId', String(currentUser.userId));
+      formData.append('actorRole', String(currentUser.role));
       formData.append('userId', String(userId));
       formData.append('role', role);
       if (theatreId) {
@@ -684,15 +687,16 @@ function App() {
           <Route
             path="/admin-dashboard"
             element={
-              <ProtectedRoute allowedRoles={['ADMIN']}>
+              <ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']}>
                 <AdminDashboard
-                    users={users}
-                    theatres={theatres}
+                  currentUser={currentUser}
+                  users={users}
+                  theatres={theatres}
                   bookings={bookings}
                   notifications={dashboardNotifications}
                   onAllocate={onAllocate}
                   onDeallocate={onDeallocate}
-                    onUpdateUserRole={onUpdateUserRole}
+                  onUpdateUserRole={onUpdateUserRole}
                 />
               </ProtectedRoute>
             }

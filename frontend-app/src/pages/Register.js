@@ -24,7 +24,7 @@ const roles = [
   {
     value: 'ADMIN',
     label: 'Admin',
-    description: 'Manage theatres, bookings, and system-wide allocation control.',
+    description: 'Manage theatres, bookings, and operations from the admin dashboard.',
   },
   {
     value: 'THEATRE',

@@ -16,7 +16,7 @@ CREATE TABLE users (
     username VARCHAR(50) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     email VARCHAR(120),
-    role ENUM('USER', 'ADMIN', 'THEATRE') NOT NULL,
+    role ENUM('USER', 'ADMIN', 'SUPER_ADMIN', 'THEATRE') NOT NULL,
     threat_area VARCHAR(100),
     theatre_id INT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -82,7 +82,7 @@ INSERT INTO theatres (name, area, map_query) VALUES
 ('StarView North', 'North Zone', 'StarView North');
 
 INSERT INTO users (username, password, email, role, threat_area, theatre_id) VALUES
-('admin', 'admin123', 'admin@local', 'ADMIN', 'ALL_AREAS', NULL),
+('admin', 'admin123', 'admin@local', 'SUPER_ADMIN', 'ALL_AREAS', NULL),
 ('theatre1', 'theatre123', 'theatre1@local', 'THEATRE', 'Downtown', 1),
 ('user1', 'user123', 'user1@mail.local', 'USER', 'Downtown', NULL);
 

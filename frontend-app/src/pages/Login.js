@@ -21,6 +21,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 const normalizeRole = (role) => {
   const value = String(role || '').trim().toUpperCase().replace(/\s+/g, '_');
   if (value === 'ADMIN') return 'ADMIN';
+  if (value === 'SUPER_ADMIN') return 'SUPER_ADMIN';
   if (value === 'USER') return 'USER';
   if (['THEATRE', 'THEATER', 'THEATRE_PERSON', 'THEATER_PERSON', 'THREATRE', 'THREAD_PERSON'].includes(value)) {
     return 'THEATRE';
@@ -33,6 +34,11 @@ const roles = [
     value: 'ADMIN',
     label: 'Admin',
     description: 'Manage all theatres, monitor threats, and control deallocation.',
+  },
+  {
+    value: 'SUPER_ADMIN',
+    label: 'Super Admin',
+    description: 'Full control over user roles and protected admin access.',
   },
   {
     value: 'USER',
@@ -59,7 +65,7 @@ export default function Login({ currentUser, onLogin, theatres, threatAreas }) {
   if (currentUser) {
     const currentRole = normalizeRole(currentUser.role);
     const route =
-      currentRole === 'ADMIN'
+      currentRole === 'ADMIN' || currentRole === 'SUPER_ADMIN'
         ? '/admin-dashboard'
         : currentRole === 'THEATRE'
           ? '/theatre-dashboard'
@@ -95,6 +101,10 @@ export default function Login({ currentUser, onLogin, theatres, threatAreas }) {
       const userRole = normalizeRole(user?.role);
 
       if (userRole === 'ADMIN') {
+        navigate('/admin-dashboard');
+        return;
+      }
+      if (userRole === 'SUPER_ADMIN') {
         navigate('/admin-dashboard');
         return;
       }

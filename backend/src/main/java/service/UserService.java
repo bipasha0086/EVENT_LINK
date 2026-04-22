@@ -18,6 +18,8 @@ public class UserService {
         switch (normalized) {
             case "ADMIN":
                 return "ADMIN";
+            case "SUPER_ADMIN":
+                return "SUPER_ADMIN";
             case "USER":
                 return "USER";
             case "THEATER":
@@ -35,6 +37,9 @@ public class UserService {
     public void registerUser(User user) throws SQLException {
         if (user.getRole() != null) {
             user.setRole(normalizeRole(user.getRole()));
+        }
+        if ("SUPER_ADMIN".equals(user.getRole())) {
+            throw new SQLException("Super admin account cannot be self-registered");
         }
         if ("THEATRE".equals(user.getRole()) && user.getTheatreId() == null) {
             throw new SQLException("Theatre role requires theatreId");
@@ -68,6 +73,9 @@ public class UserService {
 
     public void updateUser(User user) throws SQLException {
         user.setRole(normalizeRole(user.getRole()));
+        if ("SUPER_ADMIN".equals(user.getRole())) {
+            throw new SQLException("Super admin role cannot be assigned through this endpoint");
+        }
         if (!"THEATRE".equals(user.getRole())) {
             user.setTheatreId(null);
         }

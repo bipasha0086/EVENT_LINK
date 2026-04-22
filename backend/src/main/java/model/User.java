@@ -5,7 +5,7 @@ public class User {
     private String username;
     private String password;
     private String email;
-    private String role; // USER, ADMIN, THEATRE
+    private String role; // USER, ADMIN, SUPER_ADMIN, THEATRE
     private String threatArea;
     private Integer theatreId;
 

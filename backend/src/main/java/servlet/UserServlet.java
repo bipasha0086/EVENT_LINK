@@ -20,6 +20,7 @@ public class UserServlet extends HttpServlet {
     private String normalizeRole(String role) {
         String value = role == null ? "" : role.trim().toUpperCase().replaceAll("\\s+", "_");
         if ("ADMIN".equals(value)) return "ADMIN";
+        if ("SUPER_ADMIN".equals(value)) return "SUPER_ADMIN";
         if ("USER".equals(value)) return "USER";
         if ("THEATRE".equals(value)
             || "THEATER".equals(value)
@@ -43,18 +44,25 @@ public class UserServlet extends HttpServlet {
                 String username = req.getParameter("username");
                 String password = req.getParameter("password");
                 String role = req.getParameter("role");
+                String normalizedRole = normalizeRole(role);
                 String email = req.getParameter("email");
                 String threatArea = req.getParameter("threatArea");
                 String theatreIdRaw = req.getParameter("theatreId");
                 Integer theatreId = (theatreIdRaw == null || theatreIdRaw.trim().isEmpty()) ? null : Integer.parseInt(theatreIdRaw);
 
-                if ("THEATRE".equalsIgnoreCase(role) && theatreId == null) {
+                if (!"USER".equals(normalizedRole) && !"THEATRE".equals(normalizedRole) && !"ADMIN".equals(normalizedRole)) {
+                    resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    out.print("{\"status\":\"fail\",\"message\":\"Only user, theatre, and admin accounts can self-register\"}");
+                    return;
+                }
+
+                if ("THEATRE".equals(normalizedRole) && theatreId == null) {
                     resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
                     out.print("{\"status\":\"fail\",\"message\":\"Theatre role requires theatreId\"}");
                     return;
                 }
 
-                User user = new User(0, username, password, email, role, threatArea, theatreId);
+                User user = new User(0, username, password, email, normalizedRole, threatArea, theatreId);
                 userService.registerUser(user);
                 out.print("{\"status\":\"success\",\"message\":\"User registered\"}");
             } else if ("login".equals(action)) {
@@ -89,9 +97,25 @@ public class UserServlet extends HttpServlet {
                     out.print("{\"status\":\"fail\",\"message\":\"Invalid credentials\"}");
                 }
             } else if ("update".equals(action)) {
+                String actorUserIdRaw = req.getParameter("actorUserId");
+                String actorRoleRaw = req.getParameter("actorRole");
                 String userIdRaw = req.getParameter("userId");
                 String role = req.getParameter("role");
                 String theatreIdRaw = req.getParameter("theatreId");
+
+                if (actorUserIdRaw == null || actorUserIdRaw.trim().isEmpty() || actorRoleRaw == null || actorRoleRaw.trim().isEmpty()) {
+                    resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    out.print("{\"status\":\"fail\",\"message\":\"Super admin access is required\"}");
+                    return;
+                }
+
+                int actorUserId = Integer.parseInt(actorUserIdRaw);
+                User actor = userService.getUserById(actorUserId);
+                if (actor == null || !"SUPER_ADMIN".equals(normalizeRole(actor.getRole())) || !"SUPER_ADMIN".equals(normalizeRole(actorRoleRaw))) {
+                    resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    out.print("{\"status\":\"fail\",\"message\":\"Super admin access is required\"}");
+                    return;
+                }
 
                 if (userIdRaw == null || userIdRaw.trim().isEmpty()) {
                     resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
@@ -106,7 +130,26 @@ public class UserServlet extends HttpServlet {
                     return;
                 }
 
-                if ("THEATRE".equalsIgnoreCase(role) && (theatreIdRaw == null || theatreIdRaw.trim().isEmpty())) {
+                if (existing.getUserId() == actorUserId) {
+                    resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    out.print("{\"status\":\"fail\",\"message\":\"Super admin role cannot be changed\"}");
+                    return;
+                }
+
+                if ("SUPER_ADMIN".equals(normalizeRole(existing.getRole()))) {
+                    resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    out.print("{\"status\":\"fail\",\"message\":\"Super admin account cannot be modified\"}");
+                    return;
+                }
+
+                String normalizedRole = normalizeRole(role);
+                if ("SUPER_ADMIN".equals(normalizedRole)) {
+                    resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    out.print("{\"status\":\"fail\",\"message\":\"Super admin role cannot be assigned\"}");
+                    return;
+                }
+
+                if ("THEATRE".equals(normalizedRole) && (theatreIdRaw == null || theatreIdRaw.trim().isEmpty())) {
                     resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
                     out.print("{\"status\":\"fail\",\"message\":\"Theatre role requires theatreId\"}");
                     return;
@@ -118,7 +161,7 @@ public class UserServlet extends HttpServlet {
                     existing.getUsername(),
                     existing.getPassword(),
                     existing.getEmail(),
-                    role,
+                    normalizedRole,
                     existing.getThreatArea(),
                     theatreId
                 );
